@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>まとあてシューティング</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; }
+
+    /* HUD */
+    #hud {
+      position: fixed; top: 0; left: 0; right: 0;
+      display: none; justify-content: space-between;
+      padding: 20px 30px; z-index: 100; pointer-events: none;
+    }
+    .hud-box {
+      background: rgba(255,255,255,0.9);
+      border: 4px solid #ffaa00; border-radius: 20px;
+      padding: 10px 28px; text-align: center; min-width: 130px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .hud-label { font-size: 14px; color: #ff6600; font-weight: bold; font-family: sans-serif; }
+    .hud-value { font-size: 44px; font-weight: bold; color: #333; font-family: sans-serif; }
+    #timer-box.danger .hud-value { color: #ff3333; }
+    #timer-box.danger            { border-color: #ff3333; }
+
+    /* 照準リング */
+    #ring {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px; height: 200px;
+      border: 7px solid rgba(255,255,255,0.75);
+      border-radius: 50%;
+      pointer-events: none; z-index: 100; display: none;
+      transition: border-color 0.08s, box-shadow 0.08s;
+    }
+    #ring.ready {
+      border-color: #00ff44;
+      box-shadow: 0 0 30px #00ff44, 0 0 60px rgba(0,255,68,0.4);
+    }
+    #ring-dot {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px; height: 10px;
+      background: rgba(255,255,255,0.9); border-radius: 50%;
+      pointer-events: none; z-index: 101; display: none;
+    }
+
+    /* ヒント */
+    #hint {
+      position: fixed; bottom: 36px; left: 50%;
+      transform: translateX(-50%);
+      font-family: sans-serif; font-size: 18px;
+      color: #fff; background: rgba(0,0,0,0.4);
+      padding: 10px 28px; border-radius: 24px;
+      pointer-events: none; z-index: 100; display: none;
+    }
+
+    /* ボス HP バー */
+    #boss-hp-wrap {
+      position: fixed; bottom: 80px; left: 50%;
+      transform: translateX(-50%);
+      display: none; flex-direction: column; align-items: center;
+      z-index: 100; pointer-events: none;
+    }
+    #boss-hp-label {
+      font-family: sans-serif; font-size: 22px; font-weight: bold;
+      color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,0.6);
+      margin-bottom: 6px;
+    }
+    #boss-hp-bar {
+      width: 300px; height: 26px;
+      background: rgba(0,0,0,0.5);
+      border: 3px solid #fff; border-radius: 13px; overflow: hidden;
+    }
+    #boss-hp-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ff6600, #ff0000);
+      border-radius: 10px;
+      transition: width 0.25s ease;
+      width: 100%;
+    }
+
+    /* スコアポップ */
+    .popup {
+      position: fixed;
+      font-size: 40px; font-weight: bold; font-family: sans-serif;
+      pointer-events: none; z-index: 200;
+      animation: popAnim 0.85s ease-out forwards;
+    }
+    @keyframes popAnim {
+      0%   { opacity: 1; transform: translateY(0) scale(1); }
+      25%  { transform: translateY(-20px) scale(1.4); }
+      100% { opacity: 0; transform: translateY(-90px) scale(0.7); }
+    }
+
+    /* アナウンス（中央） */
+    #announce {
+      position: fixed; top: 33%; left: 50%;
+      transform: translateX(-50%);
+      font-family: sans-serif; font-size: 56px; font-weight: bold;
+      text-align: center; z-index: 200; pointer-events: none;
+      opacity: 0; transition: opacity 0.15s;
+      text-shadow: 3px 3px 0 rgba(0,0,0,0.25);
+      white-space: nowrap;
+    }
+
+    /* ステージ開始バナー（画面中央大きく） */
+    #stage-banner {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: sans-serif; font-size: 76px; font-weight: bold;
+      text-align: center; z-index: 250; pointer-events: none;
+      opacity: 0; transition: opacity 0.3s;
+      text-shadow: 4px 4px 0 rgba(0,0,0,0.4);
+      white-space: nowrap;
+    }
+
+    /* オーバーレイ共通 */
+    .overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      z-index: 300;
+      background: linear-gradient(160deg, #1e88e5 0%, #0d47a1 100%);
+    }
+    .overlay h1 {
+      font-size: 52px; color: #fff; font-family: sans-serif;
+      text-shadow: 2px 4px 0 rgba(0,0,0,0.2);
+      margin-bottom: 14px; text-align: center;
+    }
+    .overlay p {
+      font-size: 20px; color: rgba(255,255,255,0.9);
+      font-family: sans-serif; margin-bottom: 8px; text-align: center;
+    }
+    .overlay .score-big {
+      font-size: 60px; font-weight: bold; color: #ffff00;
+      font-family: sans-serif;
+      text-shadow: 2px 3px 0 rgba(0,0,0,0.3);
+      margin: 12px 0;
+    }
+    .overlay .best-line {
+      font-size: 18px; color: rgba(255,255,255,0.7);
+      font-family: sans-serif; margin-bottom: 6px;
+    }
+    .overlay button {
+      margin-top: 28px; padding: 20px 60px;
+      font-size: 26px; font-family: sans-serif;
+      background: #ffaa00; color: #fff;
+      border: none; border-radius: 60px; cursor: pointer;
+      box-shadow: 0 7px 0 #cc8000, 0 10px 18px rgba(0,0,0,0.3);
+      transition: transform 0.08s, box-shadow 0.08s;
+    }
+    .overlay button:active { transform: translateY(5px); box-shadow: 0 2px 0 #cc8000; }
+
+    #start-screen { display: flex; }
+    #game-over    { display: none; }
+    #win-screen   { display: none; background: linear-gradient(160deg, #ff9800 0%, #e91e63 100%); }
+  </style>
+</head>
+<body>
+
+  <!-- HUD（スコア・ステージ・タイマー） -->
+  <div id="hud">
+    <div class="hud-box">
+      <div class="hud-label">スコア</div>
+      <div id="score-val" class="hud-value">0</div>
+    </div>
+    <div class="hud-box">
+      <div class="hud-label">ステージ</div>
+      <div id="stage-val" class="hud-value">1</div>
+    </div>
+    <div class="hud-box" id="timer-box">
+      <div class="hud-label">のこり</div>
+      <div id="timer-val" class="hud-value">90</div>
+    </div>
+  </div>
+
+  <div id="ring"></div>
+  <div id="ring-dot"></div>
+  <div id="announce"></div>
+  <div id="stage-banner"></div>
+  <div id="hint">まるの中に入ったら クリック！</div>
+
+  <!-- ボスHPバー -->
+  <div id="boss-hp-wrap">
+    <div id="boss-hp-label">ボス HP</div>
+    <div id="boss-hp-bar"><div id="boss-hp-fill"></div></div>
+  </div>
+
+  <!-- スタート画面 -->
+  <div id="start-screen" class="overlay">
+    <h1>🎯 まとあてシューティング</h1>
+    <p>てきが まるの中に 入ったら…</p>
+    <p><strong style="color:#ffff00;font-size:24px">クリック！</strong></p>
+    <p style="margin-top:8px">3ステージ クリアを めざせ！</p>
+    <button id="start-btn">▶ はじめる</button>
+  </div>
+
+  <!-- ゲームオーバー画面 -->
+  <div id="game-over" class="overlay">
+    <h1>🎮 おわり！</h1>
+    <div class="score-big"><span id="final-score-val">0</span>てん</div>
+    <div class="best-line" id="best-line"></div>
+    <button id="restart-btn">▶ もういちど</button>
+  </div>
+
+  <!-- ゲームクリア画面 -->
+  <div id="win-screen" class="overlay">
+    <h1>🎉 ゲームクリア！</h1>
+    <div class="score-big"><span id="win-score-val">0</span>てん</div>
+    <div class="best-line" id="win-best-line"></div>
+    <button id="win-restart-btn">▶ もういちど</button>
+  </div>
+
+  <!-- A-Frame シーン（カメラ固定） -->
+  <a-scene
+    id="scene"
+    gallery-manager
+    vr-mode-ui="enabled: false"
+    renderer="antialias: true"
+    background="color: #87ceeb"
+  >
+    <a-assets>
+      <img id="boss-bg" src="../images/last_boss.png">
+    </a-assets>
+
+    <a-sky id="sky" color="#87ceeb"></a-sky>
+
+    <!-- 地面（ステージ3で非表示にする） -->
+    <a-plane id="ground" rotation="-90 0 0" width="100" height="100"
+      material="color: #5cb85c; roughness: 0.9"></a-plane>
+
+    <!-- 雲（ステージ3で非表示にする） -->
+    <a-entity id="clouds">
+      <a-sphere position="-12 7 -22"   radius="3"   material="color: #fff; shader: flat; opacity: 0.95"></a-sphere>
+      <a-sphere position="-9.5 6 -22"  radius="2"   material="color: #fff; shader: flat; opacity: 0.95"></a-sphere>
+      <a-sphere position="10 7.5 -22"  radius="2.5" material="color: #fff; shader: flat; opacity: 0.95"></a-sphere>
+      <a-sphere position="12.5 6.5 -22" radius="2"  material="color: #fff; shader: flat; opacity: 0.95"></a-sphere>
+    </a-entity>
+
+    <!-- ボスステージ背景（画面全体を覆う平面） -->
+    <a-plane id="boss-bg-plane"
+      position="0 1.6 -22" width="75" height="44"
+      material="src: #boss-bg; shader: flat"
+      visible="false"></a-plane>
+    <a-light type="ambient"     intensity="1.5" color="#ffffff"></a-light>
+    <a-light type="directional" intensity="0.8" position="1 3 2"></a-light>
+    <a-entity id="enemies"></a-entity>
+    <a-entity id="fx"></a-entity>
+    <a-camera id="cam" position="0 1.6 0"
+      look-controls="enabled: false"
+      wasd-controls="enabled: false"
+      user-height="0">
+    </a-camera>
+  </a-scene>
+
+  <script>
+  const RING_RADIUS_PX = 100; // #ring は直径200px
+
+  function pxDistToCenter(el, camera) {
+    if (el._dead || !el.object3D) return Infinity;
+    const wp = new THREE.Vector3();
+    el.object3D.getWorldPosition(wp);
+    const p  = wp.clone().project(camera);
+    const dx = p.x * (window.innerWidth  / 2);
+    const dy = p.y * (window.innerHeight / 2);
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  /* ══════════════════════════════════════════
+     GALLERY MANAGER
+  ══════════════════════════════════════════ */
+  AFRAME.registerComponent('gallery-manager', {
+    init() {
+      this.score     = 0;
+      this.timeLeft  = 90;
+      this.state     = 'idle';
+      this.enemies   = new Set();
+      this.stage     = 1;
+      this.killCount   = 0;
+      this.highScore   = parseInt(localStorage.getItem('kidsShootingHS') || '0');
+
+      this.hudEl          = document.getElementById('hud');
+      this.scoreEl        = document.getElementById('score-val');
+      this.timerEl        = document.getElementById('timer-val');
+      this.stageEl        = document.getElementById('stage-val');
+      this.timerBoxEl     = document.getElementById('timer-box');
+      this.ringEl         = document.getElementById('ring');
+      this.ringDotEl      = document.getElementById('ring-dot');
+      this.hintEl         = document.getElementById('hint');
+      this.announceEl     = document.getElementById('announce');
+      this.stageBannerEl  = document.getElementById('stage-banner');
+      this.bossHpWrapEl   = document.getElementById('boss-hp-wrap');
+      this.bossHpFillEl   = document.getElementById('boss-hp-fill');
+      this.startScreen    = document.getElementById('start-screen');
+      this.gameOverScreen = document.getElementById('game-over');
+      this.winScreen      = document.getElementById('win-screen');
+
+      document.getElementById('start-btn')      ?.addEventListener('click', () => this.startGame());
+      document.getElementById('restart-btn')    ?.addEventListener('click', () => this.startGame());
+      document.getElementById('win-restart-btn')?.addEventListener('click', () => this.startGame());
+
+      this._onClick = this._onClick.bind(this);
+      document.addEventListener('mousedown', this._onClick);
+
+      // 敵撃破スコア
+      this.el.addEventListener('enemy-defeated', e => {
+        if (this.state !== 'playing') return;
+        if (this.scoreEnabled) {
+          this.score += e.detail.pts;
+          this.updateHUD();
+          const big   = e.detail.pts >= 100;
+          const color = e.detail.pts >= 100 ? '#ff6600' : '#ffff00';
+          this.showPopup(`+${e.detail.pts}`, color, big);
+          if (!big) this.showAnnounce('やったー！🎉', '#ffff00');
+        } else {
+          this.showAnnounce('やったー！🎉', '#ffff00');
+        }
+
+        // ステージ1: 10体撃破で次へ
+        if (this.stage === 1) {
+          this.killCount++;
+          if (this.killCount >= 10) {
+            clearInterval(this._spawnTimer);
+            // このチェックポイントではステージ2には進まない（エンドレス）
+          }
+        }
+      });
+
+      // 中ボス撃破 → 分裂ミニをスポーン
+      this.el.addEventListener('midboss-split', e => {
+        if (this.state !== 'playing') return;
+        this.spawnMinis(e.detail.x, e.detail.y, e.detail.z);
+      });
+    },
+
+    startGame() {
+      this.score        = 0;
+      this.scoreEnabled = true; // このフラグをfalseにするとスコア機能をオフにできる
+      this.timeLeft  = 0;
+      this.state     = 'playing';
+      this.stage       = 1;
+      this.killCount   = 0;
+      this.clearEnemies();
+      clearInterval(this._spawnTimer);
+      clearInterval(this._countdown);
+
+      this.startScreen.style.display    = 'none';
+      this.gameOverScreen.style.display = 'none';
+      this.winScreen.style.display      = 'none';
+      this.hudEl.style.display          = 'flex';
+      this.ringEl.style.display         = 'block';
+      this.ringDotEl.style.display      = 'block';
+      this.hintEl.style.display         = 'block';
+      this.bossHpWrapEl.style.display   = 'none';
+      this.timerBoxEl.className         = 'hud-box';
+      this.timerBoxEl.style.display     = 'none'; // ボーナスタイムまでは非表示
+      this.scoreEl.parentElement.style.display = this.scoreEnabled ? '' : 'none';
+      this.stageEl.parentElement.style.display = 'none'; // このチェックポイントではステージ表示を使わない
+      this.updateHUD();
+
+      // 通常背景に戻す
+      document.getElementById('sky').setAttribute('visible', 'true');
+      document.getElementById('ground').setAttribute('visible', 'true');
+      document.getElementById('clouds').setAttribute('visible', 'true');
+      document.getElementById('boss-bg-plane').setAttribute('visible', 'false');
+
+      this.startStage1();
+    },
+
+    /* ── Stage 1: 通常敵 10体倒す ── */
+    startStage1() {
+      this.stage     = 1;
+      this.killCount = 0;
+      this.updateHUD();
+      this.showStageBanner('ステージ 1', '#ffffff');
+
+      this.spawnNormal();
+      setTimeout(() => { if (this.state === 'playing' && this.stage === 1) this.spawnNormal(); }, 1200);
+
+      this._spawnTimer = setInterval(() => {
+        if (this.state !== 'playing' || this.stage !== 1) return;
+        if (this.enemies.size < 3) this.spawnNormal();
+      }, 2000);
+    },
+
+    /* ── Stage 2: 中ボス（分裂） ── */
+    startStage2() {
+      this.stage = 2;
+      this.updateHUD();
+      this.clearEnemies();
+      this.showStageBanner('ちゅうボス！', '#ff9800');
+      this.showAnnounce('ちゅうボス とうじょう！', '#ff9800');
+
+      setTimeout(() => {
+        if (this.state === 'playing' && this.stage === 2) this.spawnMidBoss();
+      }, 2000);
+    },
+
+    /* ── Stage 3: ラスボス ── */
+    startStage3() {
+      this.stage = 3;
+      this.updateHUD();
+      this.clearEnemies();
+      this.showStageBanner('ラスボス！！', '#ff3333');
+      this.showAnnounce('ラスボス とうじょう！！', '#ff3333');
+
+      // ボス背景に切り替え（空・地面・雲を隠して背景平面を表示）
+      document.getElementById('sky').setAttribute('visible', 'false');
+      document.getElementById('ground').setAttribute('visible', 'false');
+      document.getElementById('clouds').setAttribute('visible', 'false');
+      document.getElementById('boss-bg-plane').setAttribute('visible', 'true');
+
+      setTimeout(() => {
+        if (this.state === 'playing' && this.stage === 3) this.spawnBoss();
+      }, 2200);
+    },
+
+    /* ── Stage 4: ボーナスタイム（王様を連打してスコア稼ぎ） ── */
+    startStage4() {
+      this.stage = 4;
+      this.updateHUD();
+      this.clearEnemies();
+      this.bossHpWrapEl.style.display = 'none';
+      this.showStageBanner('ボーナスタイム！', '#ffcc33');
+      this.showAnnounce('王様を連打しよう！', '#ffcc33');
+
+      // 通常背景に戻す
+      document.getElementById('sky').setAttribute('visible', 'true');
+      document.getElementById('ground').setAttribute('visible', 'true');
+      document.getElementById('clouds').setAttribute('visible', 'true');
+      document.getElementById('boss-bg-plane').setAttribute('visible', 'false');
+
+      setTimeout(() => {
+        if (this.state === 'playing' && this.stage === 4) this.startBonusCountdown();
+      }, 1500);
+    },
+
+    startBonusCountdown() {
+      this.spawnKing();
+      this.timeLeft = 5;
+      this.timerBoxEl.className     = 'hud-box';
+      this.timerBoxEl.style.display = '';
+      this.updateHUD();
+
+      this._countdown = setInterval(() => {
+        if (this.state !== 'playing') return;
+        this.timeLeft--;
+        this.updateHUD();
+        if (this.timeLeft <= 3) this.timerBoxEl.className = 'hud-box danger';
+        if (this.timeLeft <= 0) {
+          clearInterval(this._countdown);
+          this.winGame();
+        }
+      }, 1000);
+    },
+
+    endGame() {
+      this.state = 'gameover';
+      clearInterval(this._spawnTimer);
+      clearInterval(this._countdown);
+      this.clearEnemies();
+      this.bossHpWrapEl.style.display = 'none';
+
+      const isNew = this.score > this.highScore;
+      if (isNew) { this.highScore = this.score; localStorage.setItem('kidsShootingHS', this.highScore); }
+
+      this.hudEl.style.display     = 'none';
+      this.ringEl.style.display    = 'none';
+      this.ringDotEl.style.display = 'none';
+      this.hintEl.style.display    = 'none';
+
+      document.getElementById('final-score-val').textContent = this.score;
+      document.getElementById('best-line').textContent =
+        isNew ? '🌟 さいこうきろく！' : `さいこうきろく：${this.highScore}てん`;
+      this.gameOverScreen.style.display = 'flex';
+    },
+
+    winGame() {
+      this.state = 'win';
+      clearInterval(this._spawnTimer);
+      clearInterval(this._countdown);
+      this.clearEnemies();
+      this.bossHpWrapEl.style.display = 'none';
+
+      const isNew = this.score > this.highScore;
+      if (isNew) { this.highScore = this.score; localStorage.setItem('kidsShootingHS', this.highScore); }
+
+      this.hudEl.style.display     = 'none';
+      this.ringEl.style.display    = 'none';
+      this.ringDotEl.style.display = 'none';
+      this.hintEl.style.display    = 'none';
+
+      document.getElementById('win-score-val').textContent  = this.score;
+      document.getElementById('win-best-line').textContent  =
+        isNew ? '🌟 さいこうきろく！' : `さいこうきろく：${this.highScore}てん`;
+      this.winScreen.style.display = 'flex';
+    },
+
+    /* ── スポーン ── */
+    spawnNormal() {
+      const lanes = [
+        { y: 0.8,  z: -8 },
+        { y: 1.6,  z: -9 },
+        { y: 2.35, z: -8 },
+      ];
+      const lane     = lanes[Math.floor(Math.random() * lanes.length)];
+      const fromLeft = Math.random() > 0.5;
+      this._addEnemy('normal', fromLeft ? -12 : 12, lane.y, lane.z,
+        `type: normal; fromLeft: ${fromLeft}; baseY: ${lane.y}`);
+    },
+
+    spawnMidBoss() {
+      const fromLeft = Math.random() > 0.5;
+      this._addEnemy('midBoss', fromLeft ? -12 : 12, 1.6, -9,
+        `type: midBoss; fromLeft: ${fromLeft}; baseY: 1.6`);
+    },
+
+    spawnBoss() {
+      const e = this._addEnemy('boss', 0, 1.9, -9,
+        `type: boss; fromLeft: true; baseY: 1.9`);
+      this.bossHpWrapEl.style.display = 'flex';
+      this.bossHpFillEl.style.width   = '100%';
+    },
+
+    spawnKing() {
+      this._addEnemy('king', 0, 1.7, -8,
+        `type: king; fromLeft: true; baseY: 1.7`);
+    },
+
+    spawnMinis(x, y, z) {
+      const count = 4;
+      for (let i = 0; i < count; i++) {
+        const fromLeft = i % 2 === 0;
+        const laneY    = y + (Math.floor(i / 2) === 0 ? 0.4 : -0.4);
+        this._addEnemy('mini', x, laneY, z,
+          `type: mini; fromLeft: ${fromLeft}; baseY: ${laneY}`);
+      }
+    },
+
+    _addEnemy(type, x, y, z, attrs) {
+      const container = document.getElementById('enemies');
+      const e = document.createElement('a-entity');
+      e.setAttribute('position', { x, y, z });
+      e.setAttribute('gallery-enemy', attrs);
+      container.appendChild(e);
+      this.enemies.add(e);
+
+      e.addEventListener('enemy-destroyed', () => {
+        this.enemies.delete(e);
+        // ステージ2: 分裂ミニを全滅させたら次へ
+        if (this.stage === 2 && this.enemies.size === 0) {
+          setTimeout(() => { if (this.state === 'playing') this.startStage3(); }, 1000);
+        }
+        // ステージ3: ボス撃破 → ボーナスタイムへ
+        if (this.stage === 3 && this.enemies.size === 0) {
+          setTimeout(() => { if (this.state === 'playing') this.startStage4(); }, 1200);
+        }
+      });
+      return e;
+    },
+
+    clearEnemies() {
+      const c = document.getElementById('enemies');
+      while (c?.firstChild) c.removeChild(c.firstChild);
+      this.enemies.clear();
+    },
+
+    /* ── クリック判定 ── */
+    _onClick(e) {
+      if (e.button !== 0) return;
+      if (e.target.tagName === 'BUTTON') return;
+      if (this.state !== 'playing') return;
+
+      const camera = document.getElementById('cam')?.getObject3D('camera');
+      if (!camera) return;
+
+      let closest = null, closestDist = Infinity;
+      this.enemies.forEach(el => {
+        const d = pxDistToCenter(el, camera);
+        if (d < RING_RADIUS_PX && d < closestDist) { closest = el; closestDist = d; }
+      });
+
+      if (closest?.components?.['gallery-enemy']) {
+        const comp = closest.components['gallery-enemy'];
+        comp.hit();
+
+        // ボスHPバー更新（致命打でも0%に）
+        if (comp.data.type === 'boss') {
+          this.bossHpFillEl.style.width = `${Math.max(0, (comp.health / 8) * 100)}%`;
+        }
+
+        if (!closest._dead && this.scoreEnabled) {
+          const pts = comp.data.type === 'boss' ? 30
+                    : comp.data.type === 'king' ? 20
+                    : 10;
+          this.score += pts;
+          this.updateHUD();
+          this.showPopup(`+${pts}`, comp.data.type === 'king' ? '#ffcc33' : '#ffffff', comp.data.type === 'king');
+        }
+      } else {
+        this.showPopup('はずれ…', '#ffaaaa', false);
+      }
+    },
+
+    showStageBanner(text, color) {
+      const el = this.stageBannerEl;
+      el.textContent = text;
+      el.style.color = color;
+      el.style.opacity = '1';
+      clearTimeout(this._bannerTimer);
+      this._bannerTimer = setTimeout(() => { el.style.opacity = '0'; }, 2200);
+    },
+
+    showPopup(text, color, big) {
+      const p = document.createElement('div');
+      p.className       = 'popup';
+      p.textContent     = text;
+      p.style.color     = color;
+      p.style.fontSize  = big ? '52px' : '38px';
+      p.style.left      = `calc(50% + ${(Math.random() - 0.5) * 100}px)`;
+      p.style.top       = `calc(50% - 20px)`;
+      p.style.textShadow = '2px 2px 0 rgba(0,0,0,0.25)';
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 900);
+    },
+
+    showAnnounce(text, color) {
+      const el = this.announceEl;
+      el.textContent   = text;
+      el.style.color   = color;
+      el.style.opacity = '1';
+      clearTimeout(this._annTimer);
+      this._annTimer = setTimeout(() => { el.style.opacity = '0'; }, 1800);
+    },
+
+    updateHUD() {
+      if (this.scoreEl) this.scoreEl.textContent = this.score;
+      if (this.timerEl) this.timerEl.textContent = this.timeLeft;
+      if (this.stageEl) this.stageEl.textContent = this.stage;
+    },
+
+    tock() {
+      if (this.state !== 'playing') return;
+      const camera = document.getElementById('cam')?.getObject3D('camera');
+      if (!camera) return;
+
+      let inRange = false;
+      this.enemies.forEach(el => {
+        if (pxDistToCenter(el, camera) < RING_RADIUS_PX) inRange = true;
+      });
+
+      this.ringEl.className = inRange ? 'ready' : '';
+    },
+
+    remove() {
+      clearInterval(this._spawnTimer);
+      clearInterval(this._countdown);
+      document.removeEventListener('mousedown', this._onClick);
+    }
+  });
+
+  /* ══════════════════════════════════════════
+     GALLERY ENEMY
+     type: normal | midBoss | mini | boss
+  ══════════════════════════════════════════ */
+  AFRAME.registerComponent('gallery-enemy', {
+    schema: {
+      fromLeft: { type: 'boolean', default: true },
+      baseY:    { type: 'number',  default: 1.6  },
+      type:     { type: 'string',  default: 'normal' }
+    },
+
+    init() {
+      this.el._dead  = false;
+      this.dir       = this.data.fromLeft ? 1 : -1;
+      this.t         = 0;
+
+      switch (this.data.type) {
+        case 'midBoss':
+          this.health = 1;
+          this.speed  = 1.2 + Math.random() * 0.6;
+          this.color  = '#ff9800';
+          this.radius = 1.3;
+          break;
+        case 'mini':
+          this.health = 1;
+          this.speed  = 3.0 + Math.random() * 1.5;
+          this.color  = '#ffd600';
+          this.radius = 0.42;
+          break;
+        case 'boss':
+          this.health    = 8; // 通常の5体力の1.5倍
+          this.speed     = 1.4;
+          this.color     = '#e53935';
+          this.radius    = 1.8;
+          this.bounceDir = 1;
+          break;
+        case 'king':
+          this.health = Infinity;
+          this.speed  = 0;
+          this.color  = '#ffcc33';
+          this.radius = 1.5;
+          break;
+        default:
+          this.health = 1;
+          this.speed  = 1.6 + Math.random() * 1.4;
+          const pal   = ['#f44336','#ff9800','#4caf50','#2196f3','#e91e63','#9c27b0','#00bcd4'];
+          this.color  = pal[Math.floor(Math.random() * pal.length)];
+          this.radius = 0.72;
+      }
+
+      this.buildVisual();
+    },
+
+    buildVisual() {
+      const type = this.data.type;
+
+      // ボスだけドラゴンモデルを使用
+      if (type === 'boss') {
+        this.el.classList.add('gallery-enemy');
+        this.hpDots = [];
+        this._buildDragon();
+        return;
+      }
+
+      const sc = this.radius / 0.72;
+
+      this.el.setAttribute('geometry', { primitive: 'sphere', radius: this.radius });
+      this.el.setAttribute('material', { color: this.color, roughness: 0.35, metalness: 0.1 });
+      this.el.classList.add('gallery-enemy');
+
+      const addSphere = (px, py, pz, r, color) => {
+        const s = document.createElement('a-sphere');
+        s.setAttribute('radius',   r * sc);
+        s.setAttribute('position', `${px * sc} ${py * sc} ${pz * sc}`);
+        s.setAttribute('material', `color: ${color}; shader: flat`);
+        this.el.appendChild(s);
+      };
+      // 目
+      addSphere(-0.26, 0.22, 0.65, 0.16, '#fff');
+      addSphere(-0.26, 0.22, 0.78, 0.09, '#111');
+      addSphere( 0.26, 0.22, 0.65, 0.16, '#fff');
+      addSphere( 0.26, 0.22, 0.78, 0.09, '#111');
+
+      // 中ボス: ★マーク
+      if (type === 'midBoss') {
+        const star = document.createElement('a-text');
+        star.setAttribute('value',  '★');
+        star.setAttribute('color',  '#fff');
+        star.setAttribute('align',  'center');
+        star.setAttribute('position', `0 0 ${this.radius + 0.05}`);
+        star.setAttribute('scale',  '4 4 4');
+        this.el.appendChild(star);
+      }
+
+      // 王様: 冠モデル
+      if (type === 'king') {
+        const gold    = '#ffe066';
+        const gems    = ['#ff4444', '#4488ff', '#44dd44'];
+        const baseY   = this.radius + 0.05;
+
+        const band = document.createElement('a-cylinder');
+        band.setAttribute('radius',   this.radius * 0.55);
+        band.setAttribute('height',   0.18);
+        band.setAttribute('position', `0 ${baseY} 0`);
+        band.setAttribute('material', `color: ${gold}; shader: flat`);
+        this.el.appendChild(band);
+
+        const spikeCount = 3;
+        for (let i = 0; i < spikeCount; i++) {
+          const angle = (i - (spikeCount - 1) / 2) * 0.6;
+          const sx = Math.sin(angle) * this.radius * 0.4;
+          const sz = Math.cos(angle) * this.radius * 0.15;
+
+          const spike = document.createElement('a-cone');
+          spike.setAttribute('radius-bottom', this.radius * 0.16);
+          spike.setAttribute('radius-top',    0.01);
+          spike.setAttribute('height',        0.35);
+          spike.setAttribute('position',      `${sx} ${baseY + 0.25} ${sz}`);
+          spike.setAttribute('material',      `color: ${gold}; shader: flat`);
+          this.el.appendChild(spike);
+
+          const gem = document.createElement('a-sphere');
+          gem.setAttribute('radius',   0.07);
+          gem.setAttribute('position', `${sx} ${baseY + 0.42} ${sz}`);
+          gem.setAttribute('material', `color: ${gems[i % gems.length]}; shader: flat`);
+          this.el.appendChild(gem);
+        }
+      }
+    },
+
+    _buildDragon() {
+      const body  = '#cc1100';
+      const dark  = '#881100';
+      const wing  = '#991100';
+      const belly = '#ff6622';
+      const eye   = '#ffee00';
+
+      const add = (tag, pos, attrs = {}) => {
+        const el = document.createElement(tag);
+        if (pos) el.setAttribute('position', pos);
+        Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+        this.el.appendChild(el);
+        return el;
+      };
+
+      // ── 胴体 ──
+      add('a-sphere', '0 0 0', {
+        radius: '0.9', scale: '1.1 0.85 1',
+        material: `color:${body};roughness:0.6;metalness:0.25`
+      });
+      // 腹（明るめ）
+      add('a-sphere', '0 -0.18 0.42', {
+        radius: '0.68', scale: '0.78 0.52 0.55',
+        material: `color:${belly};roughness:0.7`
+      });
+
+      // ── 首 ──
+      add('a-cylinder', '0 0.44 0.66', {
+        radius: '0.25', height: '0.7', rotation: '38 0 0',
+        material: `color:${body};roughness:0.6`
+      });
+
+      // ── 頭 ──
+      add('a-sphere', '0 0.7 1.28', {
+        radius: '0.42', scale: '1 0.88 1.1',
+        material: `color:${body};roughness:0.6;metalness:0.2`
+      });
+
+      // 口先
+      add('a-cone', '0 0.54 1.78', {
+        'radius-bottom': '0.2', 'radius-top': '0.05', height: '0.52',
+        rotation: '-80 0 0',
+        material: `color:${body};roughness:0.7`
+      });
+
+      // 鼻炎（火の粉）
+      add('a-sphere', '0 0.46 2.0', {
+        radius: '0.055',
+        material: 'color:#ff5500;emissive:#ff5500;emissiveIntensity:2;shader:flat'
+      });
+
+      // ── 目 ──
+      [-0.21, 0.21].forEach(x => {
+        add('a-sphere', `${x} 0.8 1.57`, {
+          radius: '0.1',
+          material: `color:${eye};emissive:${eye};emissiveIntensity:1.8;shader:flat`
+        });
+        add('a-sphere', `${x * 0.9} 0.8 1.66`, {
+          radius: '0.056',
+          material: 'color:#000;shader:flat'
+        });
+      });
+
+      // ── 角 ──
+      [[-0.22,-15,-22],[0.22,15,22]].forEach(([x,ry,rz]) => {
+        add('a-cone', `${x} 1.04 1.2`, {
+          'radius-bottom': '0.07', 'radius-top': '0.01', height: '0.4',
+          rotation: `-12 ${ry} ${rz}`,
+          material: `color:${dark}`
+        });
+      });
+
+      // 背びれ（3本）
+      [0,-0.28,-0.56].forEach((z, i) => {
+        add('a-cone', `0 0.86 ${z}`, {
+          'radius-bottom': '0.06', 'radius-top': '0.015',
+          height: `${0.28 - i * 0.04}`,
+          rotation: `${-8 + i * 2} 0 0`,
+          material: `color:${dark}`
+        });
+      });
+
+      // ── 翼（左右、羽ばたきアニメーション） ──
+      [
+        { sx: -1, from: '-18 0 -22', to: '14 0 -52' },
+        { sx:  1, from: '-18 0  22', to: '14 0  52' },
+      ].forEach(({ sx, from, to }) => {
+        const pivot = document.createElement('a-entity');
+        pivot.setAttribute('position', `${sx * 0.95} 0.12 -0.12`);
+        pivot.setAttribute('rotation', from);
+        pivot.setAttribute('animation',
+          `property:rotation;from:${from};to:${to};dur:900;dir:alternate;loop:true;easing:easeInOutSine`);
+
+        // 翼の膜（薄いbox）
+        const mem = document.createElement('a-box');
+        mem.setAttribute('width', '2.0'); mem.setAttribute('height', '0.04'); mem.setAttribute('depth', '1.0');
+        mem.setAttribute('position', `${sx * 0.9} 0 0`);
+        mem.setAttribute('material', `color:${wing};transparent:true;opacity:0.85;roughness:0.9`);
+        pivot.appendChild(mem);
+
+        // 翼の前縁骨
+        const bone = document.createElement('a-cylinder');
+        bone.setAttribute('radius', '0.06'); bone.setAttribute('height', '2.2');
+        bone.setAttribute('position', `${sx * 1.0} 0 0`); bone.setAttribute('rotation', '0 0 90');
+        bone.setAttribute('material', `color:${dark}`);
+        pivot.appendChild(bone);
+
+        // 翼先端スパイク
+        const tip = document.createElement('a-cone');
+        tip.setAttribute('radius-bottom', '0.07'); tip.setAttribute('radius-top', '0.01'); tip.setAttribute('height', '0.38');
+        tip.setAttribute('position', `${sx * 2.08} 0 -0.18`);
+        tip.setAttribute('rotation', `0 0 ${sx * -82}`);
+        tip.setAttribute('material', `color:${dark}`);
+        pivot.appendChild(tip);
+
+        this.el.appendChild(pivot);
+      });
+
+      // ── 尻尾 ──
+      [
+        [0.16,-0.24,-0.82,0.52],
+        [0.42,-0.38,-1.38,0.38],
+        [0.72,-0.44,-1.88,0.27],
+        [0.96,-0.34,-2.22,0.17],
+        [1.1, -0.14,-2.52,0.1 ],
+      ].forEach(([x,y,z,r]) => {
+        add('a-sphere', `${x} ${y} ${z}`, {
+          radius: r, material: `color:${body};roughness:0.6`
+        });
+      });
+      add('a-cone', '1.15 0 -2.72', {
+        'radius-bottom': '0.12', 'radius-top': '0.02', height: '0.44',
+        rotation: '0 0 -68',
+        material: `color:${dark}`
+      });
+
+      // ── 脚（4本） ──
+      [[-0.55,0.35],[0.55,0.35],[-0.5,-0.35],[0.5,-0.35]].forEach(([x,z]) => {
+        add('a-cylinder', `${x} -0.85 ${z}`, {
+          radius: '0.11', height: '0.6',
+          material: `color:${body};roughness:0.6`
+        });
+        add('a-sphere', `${x} -1.2 ${z + 0.04}`, {
+          radius: '0.15',
+          material: `color:${dark};roughness:0.7`
+        });
+      });
+    },
+
+    tick(time, delta) {
+      if (this.el._dead) return;
+      const dt  = delta / 1000;
+      this.t   += dt;
+      const pos = this.el.object3D.position;
+
+      if (this.data.type === 'boss') {
+        pos.x += this.bounceDir * this.speed * dt;
+        pos.y  = this.data.baseY + Math.sin(this.t * 1.2) * 0.35;
+        if (pos.x >  6) { this.bounceDir = -1; pos.x =  6; }
+        if (pos.x < -6) { this.bounceDir =  1; pos.x = -6; }
+      } else if (this.data.type === 'mini') {
+        // ミニは跳ね返る（逃げられない）+ 跳ねるたびにスピードアップ
+        pos.x += this.dir * this.speed * dt;
+        pos.y  = this.data.baseY + Math.sin(this.t * 3.2) * 0.32;
+        if (pos.x > 9) {
+          this.dir = -1; pos.x = 9;
+          this.speed = Math.min(this.speed * 1.25, 7.5);
+          this._flashBounce();
+        }
+        if (pos.x < -9) {
+          this.dir = 1; pos.x = -9;
+          this.speed = Math.min(this.speed * 1.25, 7.5);
+          this._flashBounce();
+        }
+      } else if (this.data.type === 'king') {
+        // 王様はその場に留まってゆらゆら揺れるだけ（逃げない）
+        pos.y = this.data.baseY + Math.sin(this.t * 1.5) * 0.25;
+        this.el.object3D.rotation.y = Math.sin(this.t * 0.8) * 0.25;
+      } else {
+        pos.x += this.dir * this.speed * dt;
+        pos.y  = this.data.baseY + Math.sin(this.t * 1.8) * 0.18;
+        if (pos.x > 14 || pos.x < -14) {
+          this.el.emit('enemy-destroyed', {});
+          if (this.el.parentNode) this.el.parentNode.removeChild(this.el);
+        }
+      }
+    },
+
+    _flashBounce() {
+      // 跳ね返り時に一瞬赤く光る
+      this.el.setAttribute('material', { color: '#ff4444', roughness: 0.35 });
+      this.el.object3D.scale.set(1.2, 1.2, 1.2);
+      setTimeout(() => {
+        if (!this.el._dead) {
+          this.el.setAttribute('material', { color: this.color, roughness: 0.35 });
+          this.el.object3D.scale.set(1, 1, 1);
+        }
+      }, 120);
+    },
+
+    hit() {
+      if (this.el._dead) return;
+      this.health--;
+
+      if (this.data.type === 'boss') {
+        this.el.object3D.scale.set(1.25, 0.78, 1.25);
+        setTimeout(() => {
+          if (!this.el._dead) this.el.object3D.scale.set(1, 1, 1);
+        }, 200);
+      } else {
+        // 白フラッシュ
+        this.el.setAttribute('material', { color: '#ffffff', roughness: 0.35 });
+        setTimeout(() => {
+          if (!this.el._dead) this.el.setAttribute('material', { color: this.color, roughness: 0.35 });
+        }, 100);
+
+        // つぶれる
+        this.el.object3D.scale.set(1.35, 0.65, 1.35);
+        setTimeout(() => {
+          if (!this.el._dead) this.el.object3D.scale.set(1, 1, 1);
+        }, 180);
+      }
+
+      if (this.health <= 0) this.die();
+    },
+
+    die() {
+      this.el._dead = true;
+      this.spawnSparkles();
+
+      if (this.data.type === 'midBoss') {
+        // 分裂演出
+        this.el.sceneEl.emit('midboss-split', {
+          x: this.el.object3D.position.x,
+          y: this.el.object3D.position.y,
+          z: this.el.object3D.position.z
+        });
+        this.showSplitText();
+        this.el.setAttribute('animation__die', { property: 'scale', to: '0.01 0.01 0.01', dur: 300, easing: 'easeInBack' });
+        this.el.emit('enemy-destroyed', {});
+        setTimeout(() => { if (this.el.parentNode) this.el.parentNode.removeChild(this.el); }, 350);
+
+      } else if (this.data.type === 'boss') {
+        this.el.setAttribute('animation__die', { property: 'scale', to: '0.01 0.01 0.01', dur: 700, easing: 'easeInBack' });
+
+        // 爆発フラッシュ
+        const pos = this.el.object3D.position;
+        const flash = document.createElement('a-sphere');
+        flash.setAttribute('radius', '0.6');
+        flash.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+        flash.setAttribute('material', 'color:#ff6600;emissive:#ff6600;emissiveIntensity:3;transparent:true;opacity:0.9;shader:flat');
+        flash.setAttribute('animation__s', 'property:scale;to:7 7 7;dur:600;easing:easeOutQuad');
+        flash.setAttribute('animation__f', 'property:material.opacity;to:0;dur:600');
+        this.el.sceneEl.appendChild(flash);
+        setTimeout(() => { if (flash.parentNode) flash.parentNode.removeChild(flash); }, 660);
+
+        this.el.sceneEl.emit('enemy-defeated', { pts: 200 });
+        this.el.emit('enemy-destroyed', {});
+        setTimeout(() => { if (this.el.parentNode) this.el.parentNode.removeChild(this.el); }, 750);
+
+      } else {
+        // normal / mini
+        const isMini = this.data.type === 'mini';
+        const pts    = isMini ? 30 : 50;
+        this.el.setAttribute('animation__die', { property: 'scale', to: '0.01 0.01 0.01', dur: 280, easing: 'easeInBack' });
+        this.el.setAttribute('material', { color: '#ffffff', emissive: '#ffffff', emissiveIntensity: 2 });
+        this.el.sceneEl.emit('enemy-defeated', { pts, isMini });
+        this.el.emit('enemy-destroyed', {});
+        setTimeout(() => { if (this.el.parentNode) this.el.parentNode.removeChild(this.el); }, 320);
+      }
+    },
+
+    showSplitText() {
+      const div = document.createElement('div');
+      div.style.cssText = [
+        'position:fixed', 'left:50%', 'top:45%',
+        'transform:translateX(-50%)',
+        'font-size:56px', 'font-weight:bold',
+        'color:#ff9800', 'font-family:sans-serif',
+        'text-shadow:3px 3px 0 rgba(0,0,0,0.4)',
+        'pointer-events:none', 'z-index:200',
+        'animation:popAnim 1.1s ease-out forwards'
+      ].join(';');
+      div.textContent = 'ぶんれつ！';
+      document.body.appendChild(div);
+      setTimeout(() => div.remove(), 1100);
+    },
+
+    spawnSparkles() {
+      const pos    = this.el.object3D.position;
+      const colors = ['#ffff00','#ff6600','#ff3399','#00ffcc','#ffffff','#aaffaa'];
+      const count  = this.data.type === 'boss' ? 20 : this.data.type === 'midBoss' ? 16 : 12;
+      const rSpark = this.data.type === 'boss' ? 0.18 : 0.11;
+      const dBase  = this.data.type === 'boss' ? 1.5  : 0.7;
+
+      for (let i = 0; i < count; i++) {
+        const p   = document.createElement('a-sphere');
+        const c   = colors[i % colors.length];
+        const ang = (i / count) * Math.PI * 2 + Math.random() * 0.4;
+        const d   = dBase + Math.random() * 1.6;
+        p.setAttribute('radius',   rSpark);
+        p.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+        p.setAttribute('material', `color:${c};emissive:${c};emissiveIntensity:1;shader:flat;transparent:true;opacity:1`);
+        p.setAttribute('animation__m', {
+          property: 'position',
+          to: `${pos.x + Math.cos(ang)*d} ${pos.y + 0.5 + Math.random()*2} ${pos.z + Math.sin(ang)*d}`,
+          dur: 700, easing: 'easeOutQuad'
+        });
+        p.setAttribute('animation__f', { property: 'material.opacity', to: '0', dur: 700 });
+        this.el.sceneEl.appendChild(p);
+        setTimeout(() => { if (p.parentNode) p.parentNode.removeChild(p); }, 760);
+      }
+    }
+  });
+  </script>
+</body>
+</html>
