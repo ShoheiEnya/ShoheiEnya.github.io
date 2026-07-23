@@ -1,0 +1,424 @@
+<title>まとあてシューティングを つくろう！ おねがいシート</title>
+
+<style>
+  :root {
+    --sky-top: #6EC6E8;
+    --sky-bottom: #CDEEFB;
+    --paper: #FFFFFF;
+    --paper-tint: #EFF9FD;
+    --ink: #163654;
+    --ink-soft: #4D7392;
+    --accent: #FF8A3D;
+    --accent-strong: #E06618;
+    --boss: #E6484F;
+    --grass: #45B579;
+    --line: #BFE4F2;
+    --shadow: rgba(22, 54, 84, 0.16);
+    --ring: 4px solid var(--accent-strong);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --sky-top: #081726;
+      --sky-bottom: #122A44;
+      --paper: #14273D;
+      --paper-tint: #1B324C;
+      --ink: #EAF3FA;
+      --ink-soft: #9FBBD3;
+      --accent: #FFB25C;
+      --accent-strong: #FFC988;
+      --boss: #FF7B82;
+      --grass: #6FD69B;
+      --line: #274361;
+      --shadow: rgba(0, 0, 0, 0.45);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --sky-top: #081726;
+    --sky-bottom: #122A44;
+    --paper: #14273D;
+    --paper-tint: #1B324C;
+    --ink: #EAF3FA;
+    --ink-soft: #9FBBD3;
+    --accent: #FFB25C;
+    --accent-strong: #FFC988;
+    --boss: #FF7B82;
+    --grass: #6FD69B;
+    --line: #274361;
+    --shadow: rgba(0, 0, 0, 0.45);
+  }
+
+  :root[data-theme="light"] {
+    --sky-top: #6EC6E8;
+    --sky-bottom: #CDEEFB;
+    --paper: #FFFFFF;
+    --paper-tint: #EFF9FD;
+    --ink: #163654;
+    --ink-soft: #4D7392;
+    --accent: #FF8A3D;
+    --accent-strong: #E06618;
+    --boss: #E6484F;
+    --grass: #45B579;
+    --line: #BFE4F2;
+    --shadow: rgba(22, 54, 84, 0.16);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 380px, var(--sky-bottom) 100%);
+    color: var(--ink);
+    font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", "Hiragino Kaku Gothic ProN", sans-serif;
+    line-height: 1.8;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+  }
+
+  /* ---------- hero ---------- */
+  .hero {
+    text-align: center;
+    padding: 28px 16px 8px;
+  }
+
+  .hero-badge {
+    font-size: 3rem;
+    display: inline-block;
+    filter: drop-shadow(0 6px 10px var(--shadow));
+  }
+
+  h1 {
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Yu Gothic", sans-serif;
+    font-weight: 700;
+    font-size: clamp(1.5rem, 5vw, 2.1rem);
+    margin: 10px 0 6px;
+    text-wrap: balance;
+    letter-spacing: 0.01em;
+  }
+
+  .hero-sub {
+    margin: 0 0 6px;
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+  }
+
+  .hero-note {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 5px 16px;
+    background: var(--paper);
+    border-radius: 999px;
+    box-shadow: 0 3px 10px var(--shadow);
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- quest path ---------- */
+  .quest {
+    list-style: none;
+    margin: 36px 0 0;
+    padding: 0;
+    position: relative;
+  }
+
+  .quest::before {
+    content: "";
+    position: absolute;
+    left: 27px;
+    top: 8px;
+    bottom: 8px;
+    width: 4px;
+    background: repeating-linear-gradient(
+      180deg,
+      var(--line) 0 10px,
+      transparent 10px 20px
+    );
+  }
+
+  .stage {
+    position: relative;
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+
+  .stage-node {
+    position: relative;
+    z-index: 1;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: var(--ring);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", sans-serif;
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: var(--accent-strong);
+    box-shadow: 0 4px 10px var(--shadow);
+  }
+
+  .stage-card {
+    background: var(--paper);
+    border-radius: 18px;
+    padding: 18px 20px 20px;
+    box-shadow: 0 6px 18px var(--shadow);
+  }
+
+  .stage-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .stage-icon {
+    font-size: 1.4rem;
+  }
+
+  .stage-card h2 {
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", sans-serif;
+    font-size: 1.15rem;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .stage-goal {
+    margin: 6px 0 14px;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+  }
+
+  .stage--boss .stage-node { color: var(--boss); border-color: var(--boss); }
+  .stage--free .stage-node { color: var(--grass); border-color: var(--grass); }
+
+  /* ---------- bubbles ---------- */
+  .bubble {
+    background: var(--paper-tint);
+    border-radius: 14px;
+    padding: 14px 16px;
+    position: relative;
+  }
+
+  .bubble + .bubble { margin-top: 10px; }
+
+  .bubble-label {
+    display: inline-block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--accent-strong);
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    padding: 2px 10px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+
+  .bubble--say { border-left: 4px solid var(--accent); }
+  .bubble--boss { border-left: 4px solid var(--boss); }
+  .bubble--boss .bubble-label { color: var(--boss); background: color-mix(in srgb, var(--boss) 16%, transparent); }
+  .bubble--think { border-left: 4px solid var(--grass); }
+  .bubble--think .bubble-label { color: var(--grass); background: color-mix(in srgb, var(--grass) 18%, transparent); }
+
+  .bubble p {
+    margin: 0 0 6px;
+    font-size: 1.02rem;
+  }
+  .bubble p:last-child { margin-bottom: 0; }
+
+  .bubble ul {
+    margin: 6px 0 0;
+    padding-left: 1.3em;
+  }
+  .bubble li { margin-bottom: 4px; }
+
+  .say-order {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    margin: 0 0 6px;
+  }
+
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .chip {
+    background: var(--paper-tint);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+  }
+
+  ruby rt {
+    font-size: 0.62em;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- tips ---------- */
+  .tips {
+    margin-top: 30px;
+    background: var(--paper);
+    border-radius: 18px;
+    padding: 20px 22px 22px;
+    box-shadow: 0 6px 18px var(--shadow);
+  }
+
+  .tips h2 {
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", sans-serif;
+    font-size: 1.1rem;
+    margin: 0 0 10px;
+  }
+
+  .tips ul {
+    margin: 0;
+    padding-left: 1.4em;
+  }
+  .tips li { margin-bottom: 8px; }
+  .tips li:last-child { margin-bottom: 0; }
+
+  a { color: var(--accent-strong); }
+  a:focus-visible, button:focus-visible {
+    outline: 3px solid var(--accent-strong);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 480px) {
+    .stage { grid-template-columns: 44px 1fr; }
+    .stage-node { width: 44px; height: 44px; font-size: 1.1rem; }
+    .quest::before { left: 21px; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="hero">
+    <span class="hero-badge">🎯</span>
+    <h1>まとあてシューティングを つくろう！</h1>
+    <p class="hero-sub">AIに「おねがい」を つたえる れんしゅうシート</p>
+    <span class="hero-note">せんせいと いっしょに、じゅんばんに すすめよう</span>
+  </header>
+
+  <ol class="quest">
+
+    <li class="stage stage--think">
+      <div class="stage-node">①</div>
+      <div class="stage-card">
+        <div class="stage-head">
+          <span class="stage-icon">👂</span>
+          <h2>ヒアリング</h2>
+        </div>
+        <p class="stage-goal">どんなゲームにしたいか かんがえる回。まだAIには なにも おねがいしない。</p>
+        <div class="bubble bubble--think">
+          <span class="bubble-label">かんがえてみよう</span>
+          <ul>
+            <li><ruby>的<rt>まと</rt></ruby>は うごく？ とまってる？</li>
+            <li>むずかしさは かんたん？ それとも てごたえ ある方？</li>
+            <li>さいごに ボスが でてきたら もりあがるかな？</li>
+            <li>いろや みため（テーマ）は どうしたい？</li>
+          </ul>
+        </div>
+      </div>
+    </li>
+
+    <li class="stage">
+      <div class="stage-node">②</div>
+      <div class="stage-card">
+        <div class="stage-head">
+          <span class="stage-icon">🕹️</span>
+          <h2>シューティングを つくってみよう</h2>
+        </div>
+        <p class="stage-goal">きほんの あそびかた（<ruby>的<rt>まと</rt></ruby>を うって たおす）を つくる回。</p>
+        <div class="bubble bubble--say">
+          <span class="bubble-label">AIに いおう</span>
+          <p>「がめんの ひだり みぎから <ruby>敵<rt>てき</rt></ruby>が でてきて、がめん まんなかの まるに <ruby>敵<rt>てき</rt></ruby>が はいったら クリックで たおせる、シューティングゲームを つくってください。」</p>
+        </div>
+      </div>
+    </li>
+
+    <li class="stage">
+      <div class="stage-node">③</div>
+      <div class="stage-card">
+        <div class="stage-head">
+          <span class="stage-icon">⭐</span>
+          <h2>スコアと デザイン</h2>
+        </div>
+        <p class="stage-goal">たおした かずが わかるようにして、見た目も かわいく する回。</p>
+        <div class="bubble bubble--say">
+          <span class="bubble-label">AIに いおう ①</span>
+          <p>「<ruby>敵<rt>てき</rt></ruby>を たおしたら がめんに スコアを ひょうじして、たおすたびに 点数が ふえるように してください。」</p>
+        </div>
+        <div class="bubble bubble--say">
+          <span class="bubble-label">AIに いおう ②</span>
+          <p>「<ruby>的<rt>まと</rt></ruby>の 色を もっと カラフルに してください。」</p>
+        </div>
+      </div>
+    </li>
+
+    <li class="stage stage--boss">
+      <div class="stage-node">④</div>
+      <div class="stage-card">
+        <div class="stage-head">
+          <span class="stage-icon">🐉</span>
+          <h2>ボスを たおそう</h2>
+        </div>
+        <p class="stage-goal">中ボス → ラスボス（ドラゴン）の じゅんばんで、1つずつ たしかめながら すすめる回。</p>
+        <p class="say-order">まず①を おねがいして、うごかして たしかめてから ②に すすもう。</p>
+        <div class="bubble bubble--boss">
+          <span class="bubble-label">AIに いおう ①</span>
+          <p>「<ruby>敵<rt>てき</rt></ruby>を10<ruby>体<rt>たい</rt></ruby>たおしたら、ぶんれつする 中ボスが でてくるように してください。中ボスを たおすと 2体に ぶんれつして、その2体を たおしたら つぎに すすむように してください。」</p>
+        </div>
+        <div class="bubble bubble--boss">
+          <span class="bubble-label">AIに いおう ②</span>
+          <p>「さいごに ドラゴンの ラスボスを だしてください。HPバーを ひょうじして、なんかい か クリックしないと たおせないように してください。たおしたら ゲームクリア がめんを だしてください。」</p>
+        </div>
+      </div>
+    </li>
+
+    <li class="stage stage--free">
+      <div class="stage-node">⑤</div>
+      <div class="stage-card">
+        <div class="stage-head">
+          <span class="stage-icon">🎨</span>
+          <h2>じゆうに かいぞうしよう</h2>
+        </div>
+        <p class="stage-goal">ゲームは もう かんせい！ ここからは じぶんが お客さんに なって、じゆうに おねがいする タイム。</p>
+        <div class="bubble bubble--say">
+          <span class="bubble-label">じぶんの ことばで いおう</span>
+          <p>「〇〇を 〇〇に したい！」を、思ったとおりに AIに つたえてみよう。むずかしく かんがえなくて だいじょうぶ。</p>
+        </div>
+        <p class="say-order">アイデアが うかばない ときは……</p>
+        <div class="chip-row">
+          <span class="chip">ボーナスタイムを もっと長く</span>
+          <span class="chip">ボスを もっと強く／弱く</span>
+          <span class="chip">ぶんれつする 数を ふやす</span>
+          <span class="chip">はずれた 回数を かぞえる</span>
+          <span class="chip">音を つける</span>
+        </div>
+      </div>
+    </li>
+
+  </ol>
+
+  <section class="tips">
+    <h2>💡 こまったときの コツ</h2>
+    <ul>
+      <li>いちどに ぜんぶ おねがいしない。ひとつずつ たのもう。</li>
+      <li>つくってもらったら、かならず じぶんで さわって たしかめよう。</li>
+      <li>「おもったのと ちがうな」ってときは、そのまま つたえて だいじょうぶ！　れい：「もうすこし 大きくしてほしい」</li>
+    </ul>
+  </section>
+
+</div>
