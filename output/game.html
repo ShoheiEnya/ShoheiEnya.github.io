@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>まとあてシューティング</title>
+  <title>まとあてシューティング（スタート）</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { overflow: hidden; }
 
-    /* HUD（③でスコアを表示します。この回はまだ空） */
+    /* HUD（スコア表示） */
     #hud {
       position: fixed; top: 0; left: 0; right: 0;
-      display: none; justify-content: space-between;
+      display: flex; justify-content: space-between;
       padding: 20px 30px; z-index: 100; pointer-events: none;
     }
     .hud-box {
@@ -24,6 +24,19 @@
     .hud-label { font-size: 14px; color: #ff6600; font-weight: bold; font-family: sans-serif; }
     .hud-value { font-size: 44px; font-weight: bold; color: #333; font-family: sans-serif; }
 
+    /* スコアポップ */
+    .popup {
+      position: fixed;
+      font-size: 40px; font-weight: bold; font-family: sans-serif;
+      pointer-events: none; z-index: 200;
+      animation: popAnim 0.85s ease-out forwards;
+    }
+    @keyframes popAnim {
+      0%   { opacity: 1; transform: translateY(0) scale(1); }
+      25%  { transform: translateY(-20px) scale(1.4); }
+      100% { opacity: 0; transform: translateY(-90px) scale(0.7); }
+    }
+
     /* 照準リング（画面中央固定） */
     #ring {
       position: fixed; top: 50%; left: 50%;
@@ -31,7 +44,7 @@
       width: 200px; height: 200px;
       border: 7px solid rgba(255,255,255,0.75);
       border-radius: 50%;
-      pointer-events: none; z-index: 100; display: none;
+      pointer-events: none; z-index: 100;
       transition: border-color 0.08s, box-shadow 0.08s;
     }
     #ring.ready {
@@ -43,80 +56,37 @@
       transform: translate(-50%, -50%);
       width: 10px; height: 10px;
       background: rgba(255,255,255,0.9); border-radius: 50%;
-      pointer-events: none; z-index: 101; display: none;
+      pointer-events: none; z-index: 101;
     }
 
-    /* 撃破時のメッセージ（中央） */
-    #announce {
-      position: fixed; top: 33%; left: 50%;
-      transform: translateX(-50%);
-      font-family: sans-serif; font-size: 56px; font-weight: bold;
-      text-align: center; z-index: 200; pointer-events: none;
-      opacity: 0; transition: opacity 0.15s;
-      text-shadow: 3px 3px 0 rgba(0,0,0,0.25);
+    /* ステージクリア表示（中央） */
+    #stage-clear {
+      position: fixed; top: 45%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: sans-serif; font-size: 64px; font-weight: bold;
+      color: #ff9800; text-align: center; z-index: 250; pointer-events: none;
+      opacity: 0; transition: opacity 0.3s;
+      text-shadow: 4px 4px 0 rgba(0,0,0,0.3);
       white-space: nowrap;
     }
-
-    /* ヒント */
-    #hint {
-      position: fixed; bottom: 36px; left: 50%;
-      transform: translateX(-50%);
-      font-family: sans-serif; font-size: 18px;
-      color: #fff; background: rgba(0,0,0,0.4);
-      padding: 10px 28px; border-radius: 24px;
-      pointer-events: none; z-index: 100; display: none;
-    }
-
-    /* オーバーレイ共通（スタート画面） */
-    .overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      display: flex; flex-direction: column;
-      justify-content: center; align-items: center;
-      z-index: 300;
-      background: linear-gradient(160deg, #1e88e5 0%, #0d47a1 100%);
-    }
-    .overlay h1 {
-      font-size: 52px; color: #fff; font-family: sans-serif;
-      text-shadow: 2px 4px 0 rgba(0,0,0,0.2);
-      margin-bottom: 14px; text-align: center;
-    }
-    .overlay p {
-      font-size: 20px; color: rgba(255,255,255,0.9);
-      font-family: sans-serif; margin-bottom: 8px; text-align: center;
-    }
-    .overlay button {
-      margin-top: 28px; padding: 20px 60px;
-      font-size: 26px; font-family: sans-serif;
-      background: #ffaa00; color: #fff;
-      border: none; border-radius: 60px; cursor: pointer;
-      box-shadow: 0 7px 0 #cc8000, 0 10px 18px rgba(0,0,0,0.3);
-      transition: transform 0.08s, box-shadow 0.08s;
-    }
-    .overlay button:active { transform: translateY(5px); box-shadow: 0 2px 0 #cc8000; }
-
-    #start-screen { display: flex; }
   </style>
 </head>
 <body>
 
-  <!-- HUD（③でスコアを追加するまでは空のまま） -->
-  <div id="hud"></div>
+  <!-- HUD（スコア表示） -->
+  <div id="hud">
+    <div class="hud-box">
+      <div class="hud-label">スコア</div>
+      <div id="score-val" class="hud-value">0</div>
+    </div>
+  </div>
 
   <!-- 照準リング（画面中央固定） -->
   <div id="ring"></div>
   <div id="ring-dot"></div>
 
-  <!-- 撃破時のメッセージ・ヒント -->
-  <div id="announce"></div>
-  <div id="hint">まるの中に入ったら クリック！</div>
-
-  <!-- スタート画面 -->
-  <div id="start-screen" class="overlay">
-    <h1>🎯 まとあてシューティング</h1>
-    <p>てきが まるの中に 入ったら…</p>
-    <p><strong style="color:#ffff00;font-size:24px">クリック！</strong></p>
-    <button id="start-btn">▶ はじめる</button>
-  </div>
+  <!-- ステージクリア表示 -->
+  <div id="stage-clear">ステージクリア！</div>
 
   <!-- A-Frame シーン（カメラ固定） -->
   <a-scene
@@ -167,46 +137,40 @@
     // ===== ゲーム全体の管理役 =====
     AFRAME.registerComponent('gallery-manager', {
       init() {
-        this.score        = 0;
-        this.scoreEnabled  = false; // この回はスコアなし。③でtrueにする
-        this.state         = 'idle';
+        this.score         = 0;
+        this.killCount     = 0;     // 中ボスが出るまでに倒した通常の敵の数
+        this.awaitingMinis = false; // 分裂した2体を待っている最中か
         this.enemies       = new Set(); // 画面上の敵を管理するSet
-
-        this.hudEl      = document.getElementById('hud');
-        this.ringEl     = document.getElementById('ring');
-        this.ringDotEl  = document.getElementById('ring-dot');
-        this.announceEl = document.getElementById('announce');
-        this.hintEl     = document.getElementById('hint');
-        this.startScreen = document.getElementById('start-screen');
-
-        document.getElementById('start-btn')?.addEventListener('click', () => this.startGame());
+        this.ringEl        = document.getElementById('ring');
+        this.scoreEl       = document.getElementById('score-val');
+        this.stageClearEl  = document.getElementById('stage-clear');
 
         this._onClick = this._onClick.bind(this);
         document.addEventListener('mousedown', this._onClick);
 
         // 敵が倒された時のイベント
         this.el.addEventListener('enemy-defeated', e => {
-          if (this.state !== 'playing') return;
-          this.showAnnounce('やったー！🎉', '#ffff00');
-        });
-      },
+          this.score += e.detail.pts;
+          this.updateHUD();
+          this.showPopup(`+${e.detail.pts}`, '#ffff00');
 
-      startGame() {
-        this.state = 'playing';
-        this.clearEnemies();
-        this.startScreen.style.display = 'none';
-        this.hudEl.style.display       = 'flex';
-        this.ringEl.style.display      = 'block';
-        this.ringDotEl.style.display   = 'block';
-        this.hintEl.style.display      = 'block';
+          // 通常の敵を5体倒したら中ボスを出す
+          if (e.detail.type === 'normal') {
+            this.killCount++;
+            if (this.killCount >= 5) {
+              clearInterval(this._spawnTimer);
+              setTimeout(() => this.spawnMidBoss(), 1000);
+            }
+          }
+        });
+
+        // 中ボスが倒された時、2体に分裂させる
+        this.el.addEventListener('midboss-split', e => {
+          this.awaitingMinis = true;
+          this.spawnMinis(e.detail.x, e.detail.y, e.detail.z);
+        });
 
         this.startSpawning();
-      },
-
-      clearEnemies() {
-        this.enemies.forEach(el => { if (el.parentNode) el.parentNode.removeChild(el); });
-        this.enemies.clear();
-        clearInterval(this._spawnTimer);
       },
 
       spawnNormal() {
@@ -221,34 +185,66 @@
           `type: normal; fromLeft: ${fromLeft}; baseY: ${lane.y}`);
       },
 
+      spawnMidBoss() {
+        const fromLeft = Math.random() > 0.5;
+        this._addEnemy(fromLeft ? -12 : 12, 1.6, -9,
+          `type: midBoss; fromLeft: ${fromLeft}; baseY: 1.6`);
+      },
+
+      spawnMinis(x, y, z) {
+        const count = 2;
+        for (let i = 0; i < count; i++) {
+          const fromLeft = i % 2 === 0;
+          const laneY    = y + (i === 0 ? 0.4 : -0.4);
+          this._addEnemy(x, laneY, z, `type: mini; fromLeft: ${fromLeft}; baseY: ${laneY}`);
+        }
+      },
+
       _addEnemy(x, y, z, attrs) {
         const el = document.createElement('a-entity');
         el.setAttribute('position', `${x} ${y} ${z}`);
         el.setAttribute('gallery-enemy', attrs);
         this.el.appendChild(el);
         this.enemies.add(el);
-        el.addEventListener('enemy-destroyed', () => { this.enemies.delete(el); });
+        el.addEventListener('enemy-destroyed', () => {
+          this.enemies.delete(el);
+          if (this.awaitingMinis && this.enemies.size === 0) {
+            this.awaitingMinis = false;
+            this.showStageClear();
+          }
+        });
       },
 
       startSpawning() {
         this.spawnNormal();
         this._spawnTimer = setInterval(() => {
-          if (this.state !== 'playing') return;
           if (this.enemies.size < 3) this.spawnNormal(); // 画面上は常に3体まで
         }, 2000);
       },
 
-      showAnnounce(text, color) {
-        this.announceEl.textContent = text;
-        this.announceEl.style.color = color;
-        this.announceEl.style.opacity = 1;
-        clearTimeout(this._announceTimer);
-        this._announceTimer = setTimeout(() => { this.announceEl.style.opacity = 0; }, 700);
+      updateHUD() {
+        if (this.scoreEl) this.scoreEl.textContent = this.score;
+      },
+
+      showStageClear() {
+        this.stageClearEl.style.opacity = '1';
+        clearTimeout(this._stageClearTimer);
+        this._stageClearTimer = setTimeout(() => { this.stageClearEl.style.opacity = '0'; }, 2500);
+      },
+
+      showPopup(text, color) {
+        const popup = document.createElement('div');
+        popup.className   = 'popup';
+        popup.textContent = text;
+        popup.style.color = color;
+        popup.style.left  = `calc(50% - 20px)`;
+        popup.style.top   = `40%`;
+        document.body.appendChild(popup);
+        setTimeout(() => popup.remove(), 850);
       },
 
       _onClick(e) {
         if (e.button !== 0) return;
-        if (this.state !== 'playing') return;
 
         const camera = document.getElementById('cam')?.getObject3D('camera');
         if (!camera) return;
@@ -265,7 +261,6 @@
       },
 
       tock() {
-        if (this.state !== 'playing') return;
         const camera = document.getElementById('cam')?.getObject3D('camera');
         if (!camera) return;
 
@@ -282,7 +277,7 @@
       schema: {
         fromLeft: { type: 'boolean', default: true },
         baseY:    { type: 'number',  default: 1.6  },
-        type:     { type: 'string',  default: 'normal' }
+        type:     { type: 'string',  default: 'normal' },
       },
 
       init() {
@@ -290,11 +285,23 @@
         this.dir = this.data.fromLeft ? 1 : -1;
         this.t   = 0;
 
-        this.health = 1;
-        this.speed  = 1.6 + Math.random() * 1.4;
-        const pal   = ['#f44336','#ff9800','#4caf50','#2196f3','#e91e63','#9c27b0','#00bcd4'];
-        this.color  = pal[Math.floor(Math.random() * pal.length)];
-        this.radius = 0.72;
+        if (this.data.type === 'midBoss') {
+          this.health = 1;
+          this.speed  = 1.2 + Math.random() * 0.6;
+          this.color  = '#ff9800';
+          this.radius = 1.3;
+        } else if (this.data.type === 'mini') {
+          this.health = 1;
+          this.speed  = 3.0 + Math.random() * 1.5;
+          this.color  = '#ffd600';
+          this.radius = 0.42;
+        } else {
+          this.health = 1;
+          this.speed  = 1.6 + Math.random() * 1.4;
+          const pal   = ['#f44336','#ff9800','#ffeb3b','#8bc34a','#4caf50','#00bcd4','#2196f3','#3f51b5','#9c27b0','#e91e63','#ff4081'];
+          this.color  = pal[Math.floor(Math.random() * pal.length)];
+          this.radius = 0.72;
+        }
 
         this.buildVisual();
       },
@@ -317,6 +324,17 @@
           black.setAttribute('material', 'color: #222; shader: flat');
           this.el.appendChild(black);
         });
+
+        // 中ボス: ★マーク
+        if (this.data.type === 'midBoss') {
+          const star = document.createElement('a-text');
+          star.setAttribute('value', '★');
+          star.setAttribute('color', '#fff');
+          star.setAttribute('align', 'center');
+          star.setAttribute('position', `0 0 ${this.radius + 0.05}`);
+          star.setAttribute('scale', '4 4 4');
+          this.el.appendChild(star);
+        }
       },
 
       tick(time, delta) {
@@ -346,11 +364,24 @@
 
       die() {
         this.el._dead = true;
-        this.el.sceneEl.emit('enemy-defeated', {});
+
+        if (this.data.type === 'midBoss') {
+          this.el.sceneEl.emit('midboss-split', {
+            x: this.el.object3D.position.x,
+            y: this.el.object3D.position.y,
+            z: this.el.object3D.position.z,
+          });
+        }
+
+        const pts = this.data.type === 'midBoss' ? 100
+                  : this.data.type === 'mini'    ? 30
+                  : 50;
+        this.el.sceneEl.emit('enemy-defeated', { pts, type: this.data.type });
         this.el.emit('enemy-destroyed', {});
         setTimeout(() => { if (this.el.parentNode) this.el.parentNode.removeChild(this.el); }, 320);
       },
     });
   </script>
+
 </body>
 </html>

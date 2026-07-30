@@ -1,3 +1,7 @@
+<!DOCTYPE html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>まとあてシューティングを つくろう！ おねがいシート</title>
 
 <style>
@@ -341,9 +345,18 @@
           <h2>シューティングを つくってみよう</h2>
         </div>
         <p class="stage-goal">きほんの あそびかた（<ruby>的<rt>まと</rt></ruby>を うって たおす）を つくる回。</p>
+        <p class="say-order">1つ おねがいするたびに、うごかして たしかめてから つぎに すすもう。</p>
         <div class="bubble bubble--say">
-          <span class="bubble-label">AIに いおう</span>
-          <p>「がめんの ひだり みぎから <ruby>敵<rt>てき</rt></ruby>が でてきて、がめん まんなかの まるに <ruby>敵<rt>てき</rt></ruby>が はいったら クリックで たおせる、シューティングゲームを つくってください。」</p>
+          <span class="bubble-label">AIに いおう ①</span>
+          <p>「がめんの ひだり みぎから <ruby>敵<rt>てき</rt></ruby>が でてくるように してください。」</p>
+        </div>
+        <div class="bubble bubble--say">
+          <span class="bubble-label">AIに いおう ②</span>
+          <p>「がめんの まんなかに、ねらう ための まる（しょうじゅん）を だしてください。」</p>
+        </div>
+        <div class="bubble bubble--say">
+          <span class="bubble-label">AIに いおう ③</span>
+          <p>「<ruby>敵<rt>てき</rt></ruby>が まるに はいったら、クリックで たおせるように してください。」</p>
         </div>
       </div>
     </li>
@@ -356,6 +369,7 @@
           <h2>スコアと デザイン</h2>
         </div>
         <p class="stage-goal">たおした かずが わかるようにして、見た目も かわいく する回。</p>
+        <p class="say-order">①を おねがいして、うごかして たしかめてから ②に すすもう。</p>
         <div class="bubble bubble--say">
           <span class="bubble-label">AIに いおう ①</span>
           <p>「<ruby>敵<rt>てき</rt></ruby>を たおしたら がめんに スコアを ひょうじして、たおすたびに 点数が ふえるように してください。」</p>
@@ -371,24 +385,48 @@
       <div class="stage-node">④</div>
       <div class="stage-card">
         <div class="stage-head">
-          <span class="stage-icon">🐉</span>
-          <h2>ボスを たおそう</h2>
+          <span class="stage-icon">👾</span>
+          <h2>中ボスを たおそう</h2>
         </div>
-        <p class="stage-goal">中ボス → ラスボス（ドラゴン）の じゅんばんで、1つずつ たしかめながら すすめる回。</p>
-        <p class="say-order">まず①を おねがいして、うごかして たしかめてから ②に すすもう。</p>
+        <p class="stage-goal"><ruby>敵<rt>てき</rt></ruby>を 5<ruby>体<rt>たい</rt></ruby> たおすと あらわれる、ぶんれつする 中ボスを つくる回。</p>
+        <p class="say-order">1つ おねがいするたびに、うごかして たしかめてから つぎに すすもう。</p>
         <div class="bubble bubble--boss">
           <span class="bubble-label">AIに いおう ①</span>
-          <p>「<ruby>敵<rt>てき</rt></ruby>を5<ruby>体<rt>たい</rt></ruby>たおしたら、ぶんれつする 中ボスが でてくるように してください。中ボスを たおすと 2体に ぶんれつして、その2体を たおしたら つぎに すすむように してください。」</p>
+          <p>「<ruby>敵<rt>てき</rt></ruby>を 5<ruby>体<rt>たい</rt></ruby> たおしたら、中ボスが でてくるように してください。」</p>
         </div>
         <div class="bubble bubble--boss">
           <span class="bubble-label">AIに いおう ②</span>
-          <p>「さいごに ドラゴンの ラスボスを だしてください。HPバーを ひょうじして、なんかい か クリックしないと たおせないように してください。たおしたら ゲームクリア がめんを だしてください。」</p>
+          <p>「中ボスを たおすと 2体に ぶんれつして、その2体を たおしたら つぎに すすむように してください。」</p>
+        </div>
+      </div>
+    </li>
+
+    <li class="stage stage--boss">
+      <div class="stage-node">⑤</div>
+      <div class="stage-card">
+        <div class="stage-head">
+          <span class="stage-icon">🐉</span>
+          <h2>ラスボスを たおそう</h2>
+        </div>
+        <p class="stage-goal">さいごに ドラゴンの ラスボスが とうじょう。たおしたら ゲームかんせい！の回。</p>
+        <p class="say-order">1つ おねがいするたびに、うごかして たしかめてから つぎに すすもう。</p>
+        <div class="bubble bubble--boss">
+          <span class="bubble-label">AIに いおう ①</span>
+          <p>「さいごに ドラゴンの ラスボスを だしてください。」</p>
+        </div>
+        <div class="bubble bubble--boss">
+          <span class="bubble-label">AIに いおう ②</span>
+          <p>「ラスボスに HPバーを ひょうじして、なんかいか クリックしないと たおせないように してください。」</p>
+        </div>
+        <div class="bubble bubble--boss">
+          <span class="bubble-label">AIに いおう ③</span>
+          <p>「ラスボスを たおしたら、ゲームクリアの がめんを だしてください。」</p>
         </div>
       </div>
     </li>
 
     <li class="stage stage--free">
-      <div class="stage-node">⑤</div>
+      <div class="stage-node">⑥</div>
       <div class="stage-card">
         <div class="stage-head">
           <span class="stage-icon">🎨</span>
