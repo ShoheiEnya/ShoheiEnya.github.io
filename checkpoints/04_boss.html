@@ -320,10 +320,10 @@
           this.showAnnounce('やったー！🎉', '#ffff00');
         }
 
-        // ステージ1: 10体撃破で次へ
+        // ステージ1: 5体撃破で次へ
         if (this.stage === 1) {
           this.killCount++;
-          if (this.killCount >= 10) {
+          if (this.killCount >= 5) {
             clearInterval(this._spawnTimer);
             setTimeout(() => { if (this.state === 'playing') this.startStage2(); }, 800);
           }
