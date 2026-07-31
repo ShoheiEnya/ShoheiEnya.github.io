@@ -417,8 +417,6 @@
 
       spawnBoss() {
         this._addEnemy(0, 1.9, -9, `type: boss; fromLeft: true; baseY: 1.9`);
-        this.bossHpWrapEl.style.display = 'flex';
-        this.bossHpFillEl.style.width   = '100%';
       },
 
       _addEnemy(x, y, z, attrs) {
@@ -432,10 +430,6 @@
           // ステージ2: 中ボスの分裂ミニを2体とも倒したらラスボスへ
           if (this.stage === 2 && this.enemies.size === 0) {
             setTimeout(() => { if (this.state === 'playing') this.startStage3(); }, 1000);
-          }
-          // ステージ3: ラスボスを倒したらゲームクリア
-          if (this.stage === 3 && this.enemies.size === 0) {
-            setTimeout(() => { if (this.state === 'playing') this.winGame(); }, 1200);
           }
         });
       },
@@ -495,13 +489,7 @@
         });
 
         if (closest?.components?.['gallery-enemy']) {
-          const comp = closest.components['gallery-enemy'];
-          comp.hit();
-
-          // ボスHPバー更新（致命打でも0%に）
-          if (comp.data.type === 'boss') {
-            this.bossHpFillEl.style.width = `${Math.max(0, (comp.health / 8) * 100)}%`;
-          }
+          closest.components['gallery-enemy'].hit();
         }
       },
 
@@ -545,7 +533,7 @@
             this.radius = 0.42;
             break;
           case 'boss':
-            this.health    = 8; // 何回もクリックしないと倒せない
+            this.health    = 1; // HPバー実装時に8へ増やし、何回もクリックしないと倒せなくする
             this.speed     = 1.4;
             this.color     = '#e53935';
             this.radius    = 1.8;
