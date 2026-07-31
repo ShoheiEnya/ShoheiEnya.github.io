@@ -166,8 +166,7 @@ AFRAME.registerComponent('gallery-enemy', {
 
     this.health = 1;
     this.speed  = 1.6 + Math.random() * 1.4;
-    const pal   = ['#f44336','#ff9800','#4caf50','#2196f3','#e91e63','#9c27b0','#00bcd4'];
-    this.color  = pal[Math.floor(Math.random() * pal.length)];
+    this.color  = '#f44336'; // ②では単色（赤）。カラフル化は③の「カラフルに」の要望で行う
     this.radius = 0.72;
 
     this.buildVisual();
